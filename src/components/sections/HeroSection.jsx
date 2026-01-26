@@ -12,7 +12,6 @@ import {
 } from '../../assets/icons/svgIcons';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { useLocationSearch } from '../../hooks/useLocationSearch';
-import { useQRGeneration } from '../../hooks/useQRGeneration';
 
 const HeroSection = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -29,13 +28,6 @@ const HeroSection = () => {
     handleCategorySelect,
     getLocationsToShow
   } = useLocationSearch();
-  const {
-    qrCodeDataURL,
-    navigationLinks,
-    generateDirections,
-    downloadQRCode,
-    shareDirections
-  } = useQRGeneration();
 
   const handleLocationSelect = (location) => {
     setSelectedLocation(location);
@@ -45,9 +37,7 @@ const HeroSection = () => {
   };
 
   const handleGetDirections = () => {
-    if (!selectedLocation || !currentLocation) return;
-    
-    generateDirections(currentLocation, selectedLocation);
+    if (!selectedLocation) return;
     setShowQRModal(true);
   };
 
@@ -55,14 +45,6 @@ const HeroSection = () => {
     setSelectedLocation(null);
     setShowDirections(false);
     setSearchQuery('');
-  };
-
-  const handleDownloadQR = () => {
-    downloadQRCode(selectedLocation?.name);
-  };
-
-  const handleShareDirections = () => {
-    shareDirections(selectedLocation?.name);
   };
 
   return (
@@ -143,10 +125,6 @@ const HeroSection = () => {
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
         selectedLocation={selectedLocation}
-        qrCodeDataURL={qrCodeDataURL}
-        navigationLinks={navigationLinks}
-        onDownload={handleDownloadQR}
-        onShare={handleShareDirections}
       />
     </div>
   );

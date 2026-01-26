@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/pages/Directions.jsx - SUPABASE INTEGRATED VERSION
+import React, { useState, useEffect } from 'react';
 import { 
   Navigation, 
   Map, 
@@ -9,163 +10,57 @@ import {
   Building,
   GraduationCap,
   Users,
-  FileText
+  FileText,
+  MapPin,
+  Loader,
+  AlertCircle
 } from 'lucide-react';
+import IndoorNavigationModal from '../components/navigation/IndoorNavigationModal';
+import { getAllOffices, getCompleteOfficeData } from '../api/officesApi';
 
 const Directions = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedOffice, setSelectedOffice] = useState(null);
+  const [offices, setOffices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Sample data - replace with your actual data
-  const officesAndDepartments = [
-    // Academic Departments
-    {
-      id: 1,
-      name: "School of Education & Social Sciences",
-      category: "academic",
-      building: "Education Block",
-      floor: "Ground Floor",
-      room: "ED-101",
-      phone: "+254-068-30301",
-      email: "education@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 5:00 PM",
-      description: "Education, social sciences, and humanities programs"
-    },
-    {
-      id: 2,
-      name: "School of Pure & Applied Sciences",
-      category: "academic",
-      building: "Science Block",
-      floor: "1st Floor",
-      room: "SC-201",
-      phone: "+254-068-30302",
-      email: "sciences@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 5:00 PM",
-      description: "Mathematics, physics, chemistry, computer science, and applied sciences"
-    },
-    {
-      id: 3,
-      name: "School of Business & Economics",
-      category: "academic",
-      building: "Business Block",
-      floor: "1st Floor",
-      room: "BB-201",
-      phone: "+254-068-30303",
-      email: "business@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 5:00 PM",
-      description: "Business studies, economics, commerce, and management programs"
-    },
-    {
-      id: 4,
-      name: "School of Law",
-      category: "academic",
-      building: "Law Faculty Block",
-      floor: "Ground Floor",
-      room: "LF-105",
-      phone: "+254-068-30304",
-      email: "law@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 5:00 PM",
-      description: "Legal studies and jurisprudence programs"
-    },
-    {
-      id: 5,
-      name: "School of Nursing",
-      category: "academic",
-      building: "Medical Sciences Block",
-      floor: "2nd Floor",
-      room: "MS-205",
-      phone: "+254-068-30305",
-      email: "nursing@embuni.ac.ke",
-      hours: "Mon-Fri: 7:30 AM - 5:30 PM",
-      description: "Nursing, healthcare, and medical sciences programs"
-    },
-    {
-      id: 6,
-      name: "School of Agriculture",
-      category: "academic",
-      building: "Agriculture Complex",
-      floor: "Ground Floor",
-      room: "AC-110",
-      phone: "+254-068-30306",
-      email: "agriculture@embuni.ac.ke",
-      hours: "Mon-Fri: 7:30 AM - 5:30 PM",
-      description: "Agricultural sciences, agribusiness, and research programs"
-    },
-    // Administrative Offices
-    {
-      id: 7,
-      name: "Registrar's Office",
-      category: "administrative",
-      building: "Administration Block",
-      floor: "1st Floor",
-      room: "AB-150",
-      phone: "+254-068-30310",
-      email: "registrar@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 4:30 PM",
-      description: "Student records, transcripts, and academic registration"
-    },
-    {
-      id: 8,
-      name: "Finance Office",
-      category: "administrative",
-      building: "Administration Block",
-      floor: "Ground Floor",
-      room: "AB-120",
-      phone: "+254-068-30315",
-      email: "finance@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 4:30 PM",
-      description: "Fee payments, financial aid, and accounting services"
-    },
-    {
-      id: 9,
-      name: "Dean of Students Office",
-      category: "administrative",
-      building: "Student Affairs Block",
-      floor: "1st Floor",
-      room: "SA-201",
-      phone: "+254-068-30320",
-      email: "deanofstudents@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 5:00 PM",
-      description: "Student welfare, discipline, and campus life coordination"
-    },
-    // Student Services
-    {
-      id: 10,
-      name: "Library Services",
-      category: "services",
-      building: "Main Library",
-      floor: "Ground Floor",
-      room: "ML-001",
-      phone: "+254-068-30330",
-      email: "library@embuni.ac.ke",
-      hours: "Mon-Fri: 7:00 AM - 10:00 PM, Sat-Sun: 9:00 AM - 6:00 PM",
-      description: "Books, research materials, and study spaces"
-    },
-    {
-      id: 11,
-      name: "ICT Services",
-      category: "services",
-      building: "ICT Block",
-      floor: "Ground Floor",
-      room: "ICT-110",
-      phone: "+254-068-30340",
-      email: "ict@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 5:00 PM",
-      description: "Computer labs, network support, and technical assistance"
-    },
-    {
-      id: 12,
-      name: "Health Services",
-      category: "services",
-      building: "Medical Center",
-      floor: "Ground Floor",
-      room: "MC-001",
-      phone: "+254-068-30350",
-      email: "health@embuni.ac.ke",
-      hours: "Mon-Fri: 8:00 AM - 5:00 PM, Emergency: 24/7",
-      description: "Medical care, counseling, and health programs"
+  // Fetch offices from Supabase on component mount
+  useEffect(() => {
+    fetchOffices();
+  }, []);
+
+  const fetchOffices = async () => {
+    setLoading(true);
+    setError(null);
+    
+    const { data, error: fetchError } = await getAllOffices();
+    
+    if (fetchError) {
+      setError(fetchError);
+      setLoading(false);
+      return;
     }
-  ];
+    
+    // Transform Supabase data to match your component structure
+    const transformedOffices = data.map((office) => ({
+      id: office.id,
+      officeId: office.office_id,
+      name: office.name,
+      category: office.category,
+      building: office.building,
+      floor: office.floor,
+      room: office.room,
+      phone: office.phone,
+      email: office.email,
+      hours: office.hours,
+      description: office.description
+    }));
+    
+    setOffices(transformedOffices);
+    setLoading(false);
+  };
 
   const categories = [
     { id: 'all', name: 'All', icon: Building, color: 'bg-gray-100 text-gray-700' },
@@ -174,7 +69,7 @@ const Directions = () => {
     { id: 'services', name: 'Student Services', icon: Users, color: 'bg-purple-100 text-purple-700' }
   ];
 
-  const filteredOffices = officesAndDepartments.filter(office => {
+  const filteredOffices = offices.filter(office => {
     const matchesSearch = office.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          office.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          office.building.toLowerCase().includes(searchQuery.toLowerCase());
@@ -199,6 +94,55 @@ const Directions = () => {
       default: return 'bg-gray-50 border-gray-200';
     }
   };
+
+  const handleGetDirections = async (office) => {
+    // Fetch complete office data with navigation routes
+    const { data, error } = await getCompleteOfficeData(office.officeId);
+    
+    if (error) {
+      console.error('Error fetching office data:', error);
+      // If no navigation data, still open modal with basic office info
+      setSelectedOffice({
+        ...office,
+        indoorRoute: []
+      });
+      return;
+    }
+    
+    setSelectedOffice(data);
+  };
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-16 h-16 mx-auto text-blue-600 animate-spin mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Offices...</h3>
+          <p className="text-gray-600">Please wait while we fetch the data</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <AlertCircle className="w-16 h-16 mx-auto text-red-600 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Data</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchOffices}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -253,6 +197,7 @@ const Directions = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredOffices.map((office) => {
             const IconComponent = getCategoryIcon(office.category);
+            
             return (
               <div
                 key={office.id}
@@ -295,21 +240,24 @@ const Directions = () => {
                   </div>
                   <div className="flex items-center space-x-2 text-sm text-gray-700">
                     <Mail className="w-4 h-4 text-gray-500" />
-                    <a href={`mailto:${office.email}`} className="hover:text-blue-600">
+                    <a href={`mailto:${office.email}`} className="hover:text-blue-600 truncate">
                       {office.email}
                     </a>
                   </div>
                   <div className="flex items-center space-x-2 text-sm text-gray-700">
                     <Clock className="w-4 h-4 text-gray-500" />
-                    <span>{office.hours}</span>
+                    <span className="text-xs">{office.hours}</span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <button className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                    <Navigation className="w-4 h-4 inline mr-1" />
-                    Get Directions
+                  <button 
+                    onClick={() => handleGetDirections(office)}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>Get Directions</span>
                   </button>
                 </div>
               </div>
@@ -320,7 +268,7 @@ const Directions = () => {
         {/* No Results */}
         {filteredOffices.length === 0 && (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-            <SearchIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <Search className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Results Found</h3>
             <p className="text-gray-600">
               Try adjusting your search terms or selecting a different category.
@@ -328,6 +276,14 @@ const Directions = () => {
           </div>
         )}
       </div>
+
+      {/* Indoor Navigation Modal */}
+      {selectedOffice && (
+        <IndoorNavigationModal
+          office={selectedOffice}
+          onClose={() => setSelectedOffice(null)}
+        />
+      )}
     </div>
   );
 };
