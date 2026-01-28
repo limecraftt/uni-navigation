@@ -7,6 +7,7 @@ import CampusMap from './pages/CampusMap';
 import VirtualTour from './pages/VirtualTour';
 import Directions from './pages/Directions';
 import AdminVideos from './pages/AdminVideos';
+import AdminImages from './pages/AdminImages';
 import './index.css';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/virtual-tour" element={<VirtualTour />} />
             <Route path="/directions" element={<Directions />} />
             <Route path="/admin/videos" element={<AdminVideos />} />
+            <Route path="/admin/images" element={<AdminImages />} />
           </Routes>
         </main>
         <Footer />

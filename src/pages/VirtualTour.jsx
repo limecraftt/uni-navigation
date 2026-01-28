@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CameraIcon } from '../assets/icons/svgIcons';
 import ImageGallery from '../components/tour/ImageGallery';
 import PanoramaViewer from '../components/tour/PanoramaViewer';
-import { ALL_LOCATIONS } from '../utils/constants';
-import { supabase } from '../config/supabaseClient';
+import { getCampusImagesByLocation } from '../api/imagesApi';
 
 const VirtualTour = () => {
   const [selectedTour, setSelectedTour] = useState(null);
@@ -11,46 +10,26 @@ const VirtualTour = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('browse'); // 'browse' or '360'
   
-  // Supabase integration
-  const [tourData, setTourData] = useState([]);
-  const [locationPhotos, setLocationPhotos] = useState([]);
+  // Fetch images from Supabase
+  const [locationsWithImages, setLocationsWithImages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(true);
 
   useEffect(() => {
-    fetchTourData();
-    fetchLocationPhotos();
+    fetchCampusImages();
   }, []);
 
-  const fetchTourData = async () => {
+  const fetchCampusImages = async () => {
+    setLoadingImages(true);
     try {
-      const { data, error } = await supabase
-        .from('virtual_tours')
-        .select('*')
-        .order('display_order');
+      const { data, error } = await getCampusImagesByLocation();
       
       if (error) throw error;
-      if (data) setTourData(data);
+      if (data) setLocationsWithImages(data);
     } catch (error) {
-      console.error('Error fetching tour data:', error);
+      console.error('Error fetching campus images:', error);
     }
+    setLoadingImages(false);
   };
-
-  const fetchLocationPhotos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('location_photos')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      if (data) setLocationPhotos(data);
-    } catch (error) {
-      console.error('Error fetching location photos:', error);
-    }
-  };
-
-  const locationsWithImages = ALL_LOCATIONS.filter(location => 
-    location.images && location.images.length > 0
-  );
 
   const tourLocations = [
     {
@@ -157,7 +136,7 @@ const VirtualTour = () => {
         </div>
         
         <div className="absolute bottom-4 left-4">
-          <span className="bg-white/95 backdrop-blur-sm text-gray-800 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg">
+          <span className="bg-white/95 backdrop-blur-sm text-gray-800 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg capitalize">
             {location.category}
           </span>
         </div>
@@ -167,14 +146,18 @@ const VirtualTour = () => {
         <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
           {location.name}
         </h3>
-        <p className="text-gray-600 mb-4 line-clamp-2">{location.description}</p>
+        <p className="text-gray-600 mb-4 line-clamp-2">
+          {location.walkingTime || 'Campus location'}
+        </p>
         
-        <div className="flex items-center text-sm text-gray-500 mb-4">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {location.walkingTime}
-        </div>
+        {location.walkingTime && (
+          <div className="flex items-center text-sm text-gray-500 mb-4">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {location.walkingTime}
+          </div>
+        )}
         
         <button
           onClick={() => handleViewLocationImages(location)}
@@ -343,11 +326,27 @@ const VirtualTour = () => {
               <h2 className="text-3xl font-bold text-gray-900 mb-3">Location Gallery</h2>
               <p className="text-gray-600">Browse through our collection of campus locations</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {locationsWithImages.map(location => (
-                <LocationCard key={location.id} location={location} />
-              ))}
-            </div>
+            
+            {loadingImages ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading images...</p>
+              </div>
+            ) : locationsWithImages.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {locationsWithImages.map((location, index) => (
+                  <LocationCard key={index} location={location} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-2xl shadow-md">
+                <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Images Yet</h3>
+                <p className="text-gray-600">Upload some images from the admin panel to get started!</p>
+              </div>
+            )}
           </div>
         )}
 
