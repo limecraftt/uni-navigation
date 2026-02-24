@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CameraIcon } from '../assets/icons/svgIcons';
 import ImageGallery from '../components/tour/ImageGallery';
 import PanoramaViewer from '../components/tour/PanoramaViewer';
-import { getCampusImagesByLocation } from '../api/imagesApi';
+import { getCampusImagesByLocation, getAllPanoramas } from '../api/imagesApi';
 
 const VirtualTour = () => {
   const [selectedTour, setSelectedTour] = useState(null);
@@ -14,8 +14,13 @@ const VirtualTour = () => {
   const [locationsWithImages, setLocationsWithImages] = useState([]);
   const [loadingImages, setLoadingImages] = useState(true);
 
+  // Fetch panoramas from Supabase
+  const [tourLocations, setTourLocations] = useState([]);
+  const [loadingPanoramas, setLoadingPanoramas] = useState(true);
+
   useEffect(() => {
     fetchCampusImages();
+    fetchPanoramas();
   }, []);
 
   const fetchCampusImages = async () => {
@@ -31,68 +36,32 @@ const VirtualTour = () => {
     setLoadingImages(false);
   };
 
-  const tourLocations = [
-    {
-      id: 1,
-      title: "Main Campus Entrance",
-      description: "Explore the grand entrance and welcome center of the University of Embu",
-      image: "/api/placeholder/400/250",
-      panoramaUrl: "https://your-supabase-bucket.supabase.co/storage/v1/object/public/360-images/entrance.jpg",
-      duration: "3-5 min",
-      highlights: ["Welcome Center", "Information Desk", "Campus Gardens"],
-      available: true
-    },
-    {
-      id: 2,
-      title: "Academic Buildings",
-      description: "Tour our state-of-the-art lecture halls, laboratories, and research facilities",
-      image: "/api/placeholder/400/250",
-      panoramaUrl: "https://your-supabase-bucket.supabase.co/storage/v1/object/public/360-images/academic.jpg",
-      duration: "8-10 min",
-      highlights: ["Modern Lecture Halls", "Research Labs", "Library Complex"],
-      available: true
-    },
-    {
-      id: 3,
-      title: "Student Life Centers",
-      description: "Discover recreational facilities, dining areas, and student activity centers",
-      image: "/api/placeholder/400/250",
-      panoramaUrl: "https://your-supabase-bucket.supabase.co/storage/v1/object/public/360-images/student-life.jpg",
-      duration: "6-8 min",
-      highlights: ["Student Union", "Dining Hall", "Recreation Center"],
-      available: true
-    },
-    {
-      id: 4,
-      title: "Residential Halls",
-      description: "See our comfortable and modern student accommodation facilities",
-      image: "/api/placeholder/400/250",
-      panoramaUrl: null,
-      duration: "5-7 min",
-      highlights: ["Dormitories", "Common Areas", "Study Lounges"],
-      available: false
-    },
-    {
-      id: 5,
-      title: "Sports & Recreation",
-      description: "Experience our athletic facilities and outdoor recreational spaces",
-      image: "/api/placeholder/400/250",
-      panoramaUrl: null,
-      duration: "7-9 min",
-      highlights: ["Sports Complex", "Playing Fields", "Fitness Center"],
-      available: false
-    },
-    {
-      id: 6,
-      title: "Campus Grounds",
-      description: "Enjoy a scenic tour of our beautiful campus landscape and outdoor spaces",
-      image: "/api/placeholder/400/250",
-      panoramaUrl: "https://your-supabase-bucket.supabase.co/storage/v1/object/public/360-images/grounds.jpg",
-      duration: "10-12 min",
-      highlights: ["Botanical Gardens", "Walking Paths", "Outdoor Amphitheater"],
-      available: true
+  const fetchPanoramas = async () => {
+    setLoadingPanoramas(true);
+    try {
+      const { data, error } = await getAllPanoramas();
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Transform Supabase data to match component structure
+        const transformedPanoramas = data.map(panorama => ({
+          id: panorama.id,
+          title: panorama.title,
+          description: panorama.description,
+          image: panorama.thumbnail_url || panorama.panorama_url,
+          panoramaUrl: panorama.panorama_url,
+          duration: panorama.duration,
+          highlights: panorama.highlights || [],
+          available: panorama.is_available
+        }));
+        setTourLocations(transformedPanoramas);
+      }
+    } catch (error) {
+      console.error('Error fetching panoramas:', error);
     }
-  ];
+    setLoadingPanoramas(false);
+  };
 
   const handleStartTour = (tour) => {
     setSelectedTour(tour);
@@ -176,7 +145,7 @@ const VirtualTour = () => {
     <div className="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:-translate-y-2">
       <div className="relative h-64 overflow-hidden">
         <img 
-          src={tour.image} 
+          src={tour.image || "/api/placeholder/400/250"} 
           alt={tour.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
@@ -211,21 +180,23 @@ const VirtualTour = () => {
         </h3>
         <p className="text-gray-600 mb-4 line-clamp-2">{tour.description}</p>
         
-        <div className="mb-4">
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Tour Highlights
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {tour.highlights.map((highlight, index) => (
-              <span 
-                key={index}
-                className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100"
-              >
-                {highlight}
-              </span>
-            ))}
+        {tour.highlights && tour.highlights.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Tour Highlights
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {tour.highlights.map((highlight, index) => (
+                <span 
+                  key={index}
+                  className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100"
+                >
+                  {highlight}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         
         <button
           onClick={() => handleStartTour(tour)}
@@ -356,11 +327,27 @@ const VirtualTour = () => {
               <h2 className="text-3xl font-bold text-gray-900 mb-3">Immersive 360° Tours</h2>
               <p className="text-gray-600">Experience the campus in full panoramic view</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {tourLocations.map(tour => (
-                <TourCard key={tour.id} tour={tour} />
-              ))}
-            </div>
+            
+            {loadingPanoramas ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading 360° tours...</p>
+              </div>
+            ) : tourLocations.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {tourLocations.map(tour => (
+                  <TourCard key={tour.id} tour={tour} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-white rounded-2xl shadow-md">
+                <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No 360° Tours Yet</h3>
+                <p className="text-gray-600">Upload panoramas from the admin panel to get started!</p>
+              </div>
+            )}
           </div>
         )}
       </div>

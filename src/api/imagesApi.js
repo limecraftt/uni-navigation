@@ -53,7 +53,7 @@ export const getCampusImagesByLocation = async () => {
 
     if (error) throw error;
 
-    // Group by location
+    // Group by location and include image IDs
     const grouped = data.reduce((acc, image) => {
       if (!acc[image.location_name]) {
         acc[image.location_name] = {
@@ -64,9 +64,11 @@ export const getCampusImagesByLocation = async () => {
         };
       }
       acc[image.location_name].images.push({
+        id: image.id, // Database ID for deletion
         src: image.image_url,
         caption: image.caption,
-        thumbnail: image.thumbnail_url
+        thumbnail: image.thumbnail_url,
+        storagePath: image.image_url // For storage deletion
       });
       return acc;
     }, {});
