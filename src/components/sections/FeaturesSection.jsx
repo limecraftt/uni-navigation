@@ -1,3 +1,4 @@
+// src/components/sections/FeaturesSection.jsx
 import React from 'react';
 import FeatureCard from '../ui/FeatureCard';
 import { MapIcon, CameraIcon, NavigationIcon } from '../../assets/icons/svgIcons';
@@ -23,10 +24,24 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <div className="pb-20">
+    <div className="pb-8 md:pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        
+        {/* Mobile: horizontal scrollable row */}
+        <div className="flex md:hidden gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+          {features.map((feature, index) => (
+            <div key={index} className="snap-center flex-shrink-0 w-64">
+              <FeatureCard
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: 3 column grid */}
+        <div className="hidden md:grid grid-cols-3 gap-8 mb-16">
           {features.map((feature, index) => (
             <FeatureCard
               key={index}
@@ -36,6 +51,7 @@ const FeaturesSection = () => {
             />
           ))}
         </div>
+
       </div>
     </div>
   );

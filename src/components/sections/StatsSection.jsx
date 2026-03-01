@@ -1,3 +1,4 @@
+// src/components/sections/StatsSection.jsx
 import React from 'react';
 import StatCard from '../ui/StatCard';
 import { STATS } from '../../utils/constants';
@@ -19,8 +20,9 @@ const StatsSection = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+    // Hidden on mobile, visible on desktop
+    <div className="hidden md:block max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+      <div className="grid grid-cols-3 gap-8 text-center">
         {stats.map((stat, index) => (
           <StatCard
             key={index}
