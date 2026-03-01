@@ -8,20 +8,35 @@ import VisitUsSection from '../components/sections/VisitUsSection';
 const Home = () => {
   return (
     <>
-      {/* Continuous Hero + Features Section with University Building Background */}
-      <section 
-        className="relative bg-no-repeat"
+      {/* Mobile: portrait image (hidden on md and above) */}
+      <section
+        className="relative md:hidden bg-no-repeat"
+        style={{
+          backgroundImage: 'url(/university-building-mobile.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          backgroundAttachment: 'scroll',
+        }}
+      >
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="relative z-10">
+          <HeroSection />
+          <FeaturesSection />
+          <StatsSection />
+        </div>
+      </section>
+
+      {/* Desktop: landscape image (hidden on mobile) */}
+      <section
+        className="relative hidden md:block bg-no-repeat"
         style={{
           backgroundImage: 'url(/university-building.jpg)',
           backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-          backgroundAttachment: 'scroll', // 'fixed' causes zoom issues on mobile
+          backgroundPosition: 'center 20%',
+          backgroundAttachment: 'scroll',
         }}
       >
-        {/* Dark overlay to improve text readability on mobile */}
-        <div className="absolute inset-0 bg-black/30 md:bg-black/20" />
-        
-        {/* Content needs relative positioning to sit above overlay */}
+        <div className="absolute inset-0 bg-black/25" />
         <div className="relative z-10">
           <HeroSection />
           <FeaturesSection />
