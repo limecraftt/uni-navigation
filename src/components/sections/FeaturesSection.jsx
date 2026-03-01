@@ -24,34 +24,30 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <div className="pb-8 md:pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Mobile: horizontal scrollable row */}
-        <div className="flex md:hidden gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
-          {features.map((feature, index) => (
-            <div key={index} className="snap-center flex-shrink-0 w-64">
-              <FeatureCard
-                icon={feature.icon}
-                title={feature.title}
-                description={feature.description}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop: 3 column grid */}
-        <div className="hidden md:grid grid-cols-3 gap-8 mb-16">
-          {features.map((feature, index) => (
+    <div>
+      {/* Mobile: horizontal scrollable row */}
+      <div className="flex md:hidden gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
+        {features.map((feature, index) => (
+          <div key={index} className="snap-center flex-shrink-0 w-64">
             <FeatureCard
-              key={index}
               icon={feature.icon}
               title={feature.title}
               description={feature.description}
             />
-          ))}
-        </div>
+          </div>
+        ))}
+      </div>
 
+      {/* Desktop: 3 column grid */}
+      <div className="hidden md:grid grid-cols-3 gap-8">
+        {features.map((feature, index) => (
+          <FeatureCard
+            key={index}
+            icon={feature.icon}
+            title={feature.title}
+            description={feature.description}
+          />
+        ))}
       </div>
     </div>
   );
