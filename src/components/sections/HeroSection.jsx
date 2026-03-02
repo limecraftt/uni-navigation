@@ -47,8 +47,9 @@ const HeroSection = () => {
   };
 
   return (
-    <div className="py-12 md:py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    // min-h-screen on mobile so hero fills the full viewport
+    <div className="min-h-screen md:min-h-0 md:py-20 flex items-center md:block">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-0">
         <div className="text-center text-white max-w-4xl mx-auto">
           <h1 className="text-3xl md:text-5xl font-bold mb-2">
             Welcome to
@@ -74,7 +75,7 @@ const HeroSection = () => {
           )}
           
           {/* Action Buttons */}
-          <div className="flex flex-col gap-3 justify-center items-center mb-10 md:mb-16 w-full max-w-sm mx-auto md:max-w-none md:flex-row md:gap-4">
+          <div className="flex flex-col gap-3 justify-center items-center w-full max-w-sm mx-auto md:max-w-none md:flex-row md:gap-4">
             <Link to="/directions" className="w-full md:w-auto">
               <Button 
                 variant="primary" 
@@ -87,7 +88,6 @@ const HeroSection = () => {
               </Button>
             </Link>
             
-            {/* Location Search Component */}
             <div className="w-full md:w-auto">
               <LocationSearch
                 searchQuery={searchQuery}
@@ -102,7 +102,6 @@ const HeroSection = () => {
               />
             </div>
             
-            {/* Virtual Tour Button */}
             <Link to="/virtual-tour" className="w-full md:w-auto">
               <Button variant="secondary" size="large" className="w-full">
                 Virtual Tour
@@ -112,13 +111,23 @@ const HeroSection = () => {
 
           {/* Selected Location Card */}
           {selectedLocation && showDirections && (
-            <LocationCard
-              location={selectedLocation}
-              onClose={handleCloseLocationCard}
-              onGetDirections={handleGetDirections}
-              currentLocation={currentLocation}
-            />
+            <div className="mt-6">
+              <LocationCard
+                location={selectedLocation}
+                onClose={handleCloseLocationCard}
+                onGetDirections={handleGetDirections}
+                currentLocation={currentLocation}
+              />
+            </div>
           )}
+
+          {/* Scroll hint on mobile */}
+          <div className="md:hidden mt-8 flex flex-col items-center text-white/50 animate-bounce">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+            <span className="text-xs mt-1">Scroll to explore</span>
+          </div>
         </div>
       </div>
 
