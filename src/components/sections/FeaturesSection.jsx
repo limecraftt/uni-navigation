@@ -7,17 +7,17 @@ import { FEATURES } from '../../utils/constants';
 const FeaturesSection = () => {
   const features = [
     {
-      icon: <MapIcon className="w-8 h-8 text-blue-100" />,
+      icon: <MapIcon className="w-7 h-7" />,
       title: FEATURES.INTERACTIVE_MAPS.title,
       description: FEATURES.INTERACTIVE_MAPS.description
     },
     {
-      icon: <CameraIcon className="w-8 h-8 text-blue-100" />,
+      icon: <CameraIcon className="w-7 h-7" />,
       title: FEATURES.VIRTUAL_TOURS.title,
       description: FEATURES.VIRTUAL_TOURS.description
     },
     {
-      icon: <NavigationIcon className="w-8 h-8 text-blue-100" />,
+      icon: <NavigationIcon className="w-7 h-7" />,
       title: FEATURES.SMART_DIRECTIONS.title,
       description: FEATURES.SMART_DIRECTIONS.description
     }
@@ -33,6 +33,7 @@ const FeaturesSection = () => {
               icon={feature.icon}
               title={feature.title}
               description={feature.description}
+              variant="light"
             />
           </div>
         ))}
@@ -46,6 +47,7 @@ const FeaturesSection = () => {
             icon={feature.icon}
             title={feature.title}
             description={feature.description}
+            variant="light"
           />
         ))}
       </div>

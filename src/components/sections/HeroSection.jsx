@@ -47,9 +47,9 @@ const HeroSection = () => {
   };
 
   return (
-    // min-h-screen on mobile so hero fills the full viewport
-    <div className="min-h-screen md:min-h-0 md:py-20 flex items-center md:block">
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-0">
+    <div className="min-h-screen md:min-h-0 md:py-20 flex flex-col justify-between md:block pt-16 pb-8 md:pt-0 md:pb-0">
+      {/* Main content — pushed toward upper third on mobile */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center text-white max-w-4xl mx-auto">
           <h1 className="text-3xl md:text-5xl font-bold mb-2">
             Welcome to
@@ -120,15 +120,15 @@ const HeroSection = () => {
               />
             </div>
           )}
-
-          {/* Scroll hint on mobile */}
-          <div className="md:hidden mt-8 flex flex-col items-center text-white/50 animate-bounce">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-            <span className="text-xs mt-1">Scroll to explore</span>
-          </div>
         </div>
+      </div>
+
+      {/* Scroll hint pinned to bottom on mobile */}
+      <div className="md:hidden flex flex-col items-center text-white/50 animate-bounce pb-4">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+        <span className="text-xs mt-1">Scroll to explore</span>
       </div>
 
       {/* QR Code Modal */}
