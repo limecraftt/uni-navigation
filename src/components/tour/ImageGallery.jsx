@@ -54,7 +54,7 @@ const ImageGallery = ({ location, onClose }) => {
       <img
         src={currentImage?.src}
         alt={currentImage?.caption || location.name}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
       />
 
       {/* Close button — top right */}
