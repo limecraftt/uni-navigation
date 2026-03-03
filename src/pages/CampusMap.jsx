@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, QrCode, Navigation, ExternalLink, Satellite, Map, Loader } from 'lucide-react';
 import { getAllLocations } from '../api/locationsApi';
 
 export default function CampusMap() {
-  const mapRef = useRef(null);
-  const leafletMapRef = useRef(null);
-  const tileLayerRef = useRef(null);
   const [mapView, setMapView] = useState('satellite');
   const [locations, setLocations] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(true);
@@ -21,42 +18,8 @@ export default function CampusMap() {
     });
   }, []);
 
-  useEffect(() => {
-    const loadLeaflet = () => {
-      if (window.L) { initMap(); return; }
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = initMap;
-      document.head.appendChild(script);
-    };
-    if (!document.getElementById('leaflet-css')) {
-      const css = document.createElement('link');
-      css.id = 'leaflet-css'; css.rel = 'stylesheet';
-      css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(css);
-    }
-    loadLeaflet();
-    return () => { if (leafletMapRef.current) { leafletMapRef.current.remove(); leafletMapRef.current = null; } };
-  }, []);
-
-  const initMap = () => {
-    if (leafletMapRef.current || !mapRef.current || !window.L) return;
-    const L = window.L;
-    const map = L.map(mapRef.current, { center: [-0.5126, 37.4580], zoom: 17 });
-    leafletMapRef.current = map;
-    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 20 });
-    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 20 });
-    satellite.addTo(map);
-    tileLayerRef.current = { satellite, street, active: 'satellite' };
-  };
-
-  useEffect(() => {
-    if (!leafletMapRef.current || !tileLayerRef.current || !window.L) return;
-    const map = leafletMapRef.current;
-    const tiles = tileLayerRef.current;
-    if (mapView === 'satellite' && tiles.active !== 'satellite') { map.removeLayer(tiles.street); tiles.satellite.addTo(map); tiles.active = 'satellite'; }
-    else if (mapView === 'street' && tiles.active !== 'street') { map.removeLayer(tiles.satellite); tiles.street.addTo(map); tiles.active = 'street'; }
-  }, [mapView]);
+  const satelliteMapUrl = `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d1500!2d37.45604!3d-0.515579!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e1!3m2!1sen!2ske!4v1733673600000!5m2!1sen!2ske`;
+  const standardMapUrl = `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d1500!2d37.45604!3d-0.515579!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2ske!4v1733673600000!5m2!1sen!2ske`;
 
   const grouped = locations.reduce((acc, loc) => {
     if (!acc[loc.category]) acc[loc.category] = [];
@@ -95,7 +58,11 @@ export default function CampusMap() {
           {!showQR ? (
             <div className="space-y-3">
               {loadingLocations ? (
-                <div className="flex items-center gap-2 py-3 text-gray-500 text-sm"><Loader className="w-4 h-4 animate-spin" />Loading locations...</div>
+                <div className="flex items-center gap-2 py-3 text-gray-500 text-sm">
+                  <Loader className="w-4 h-4 animate-spin" />Loading locations...
+                </div>
+              ) : locations.length === 0 ? (
+                <div className="py-3 text-gray-400 text-sm text-center">No locations added yet.</div>
               ) : (
                 <select value={selectedLocation} onChange={e => setSelectedLocation(e.target.value)}
                   className="w-full px-3 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-base">
@@ -127,8 +94,8 @@ export default function CampusMap() {
                 <ExternalLink className="w-5 h-5" />Open Directions in Google Maps
               </a>
               <div className="flex flex-col sm:flex-row gap-2">
-                <button onClick={reset} className="flex-1 px-5 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold text-sm">Select Another Location</button>
-                <a href={qrCodeUrl} download={`${selectedLocation}.png`} className="flex-1 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm text-center">Download QR Code</a>
+                <button onClick={reset} className="flex-1 px-5 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold text-sm">Select Another</button>
+                <a href={qrCodeUrl} download={`${selectedLocation}.png`} className="flex-1 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm text-center">Download QR</a>
               </div>
             </div>
           )}
@@ -138,18 +105,29 @@ export default function CampusMap() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold text-gray-900">Campus Map</h3>
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              <button onClick={() => setMapView('satellite')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mapView === 'satellite' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}>
+              <button onClick={() => setMapView('satellite')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mapView === 'satellite' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}>
                 <Satellite className="w-3.5 h-3.5" />Satellite
               </button>
-              <button onClick={() => setMapView('street')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mapView === 'street' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}>
-                <Map className="w-3.5 h-3.5" />Street
+              <button onClick={() => setMapView('standard')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${mapView === 'standard' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'}`}>
+                <Map className="w-3.5 h-3.5" />Standard
               </button>
             </div>
           </div>
           <div className="rounded-xl overflow-hidden border-2 border-gray-100" style={{ height: '70vh', minHeight: '400px' }}>
-            <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+            <iframe
+              src={mapView === 'satellite' ? satelliteMapUrl : standardMapUrl}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="University of Embu Campus Map"
+            />
           </div>
-          <p className="text-xs text-gray-400 text-center mt-2">👆 One finger to pan · Pinch to zoom</p>
+          <p className="text-xs text-gray-400 text-center mt-2">Use two fingers to pan the map</p>
         </div>
 
         <div className="mt-6 text-center text-xs text-gray-500">
