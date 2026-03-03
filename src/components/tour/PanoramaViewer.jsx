@@ -3,9 +3,11 @@ import React, { useRef, useState, useEffect } from 'react';
 
 const PanoramaViewer = ({ tour, onClose, isLoading }) => {
   const videoRef = useRef(null);
+  const containerRef = useRef(null);
   const lastXRef = useRef(null);
   const rafRef = useRef(null);
   const targetRateRef = useRef(0);
+  const playingRef = useRef(false);
 
   const [videoReady, setVideoReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -17,39 +19,44 @@ const PanoramaViewer = ({ tour, onClose, isLoading }) => {
     return () => clearTimeout(t);
   }, []);
 
-  // Smooth playback rate animation loop
+  // Safe play helper — avoids AbortError
+  const safePlay = (video) => {
+    if (playingRef.current) return;
+    playingRef.current = true;
+    video.play().catch(() => { playingRef.current = false; });
+  };
+
+  const safePause = (video) => {
+    playingRef.current = false;
+    video.pause();
+  };
+
+  // RAF loop
   useEffect(() => {
+    if (!videoReady) return;
     const video = videoRef.current;
     if (!video) return;
 
     const loop = () => {
-      if (video) {
-        // Smoothly interpolate current playback rate toward target
-        const current = video.playbackRate * (targetRateRef.current >= 0 ? 1 : -1);
-        const target = targetRateRef.current;
+      const rate = targetRateRef.current;
 
-        if (Math.abs(target) < 0.05) {
-          // Stop
-          video.pause();
-          video.playbackRate = 1;
-        } else if (target > 0) {
-          // Forward
-          if (video.paused) video.play();
-          video.playbackRate = Math.min(Math.abs(target), 8);
-        } else {
-          // Backward — small seek steps
-          video.pause();
-          const step = Math.min(Math.abs(target) * 0.04, 0.3);
-          video.currentTime = Math.max(0, video.currentTime - step);
-        }
-
-        // Wrap around
-        if (video.currentTime >= video.duration - 0.05) {
-          video.currentTime = 0;
-        }
-
-        setCurrentTime(video.currentTime || 0);
+      if (Math.abs(rate) < 0.05) {
+        safePause(video);
+        video.playbackRate = 1;
+      } else if (rate > 0) {
+        video.playbackRate = Math.min(rate, 8);
+        safePlay(video);
+      } else {
+        safePause(video);
+        const step = Math.min(Math.abs(rate) * 0.03, 0.2);
+        video.currentTime = Math.max(0, video.currentTime - step);
       }
+
+      if (video.currentTime >= video.duration - 0.05) {
+        video.currentTime = 0;
+      }
+
+      setCurrentTime(video.currentTime || 0);
       rafRef.current = requestAnimationFrame(loop);
     };
 
@@ -69,67 +76,67 @@ const PanoramaViewer = ({ tour, onClose, isLoading }) => {
     };
 
     video.addEventListener('loadedmetadata', onReady);
-    video.addEventListener('canplay', () => {
-      if (!videoReady) onReady();
-    });
-
+    video.addEventListener('canplay', onReady);
     return () => {
       video.removeEventListener('loadedmetadata', onReady);
+      video.removeEventListener('canplay', onReady);
     };
   }, []);
 
-  // Touch handlers
-  const handleTouchStart = (e) => {
-    lastXRef.current = e.touches[0].clientX;
-    targetRateRef.current = 0;
-    setShowHint(false);
-  };
+  // Attach touch events with passive:false on the container div
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  const handleTouchMove = (e) => {
-    e.preventDefault();
-    if (lastXRef.current === null) return;
-
-    const deltaX = e.touches[0].clientX - lastXRef.current;
-    lastXRef.current = e.touches[0].clientX;
-
-    // Map finger speed to playback rate
-    // Right = backward, Left = forward (natural panning feel)
-    const rate = -(deltaX / 6);
-    targetRateRef.current = rate;
-  };
-
-  const handleTouchEnd = () => {
-    lastXRef.current = null;
-    // Gradually slow down
-    const slowDown = () => {
-      targetRateRef.current *= 0.85;
-      if (Math.abs(targetRateRef.current) > 0.1) {
-        requestAnimationFrame(slowDown);
-      } else {
-        targetRateRef.current = 0;
-      }
+    const onTouchStart = (e) => {
+      lastXRef.current = e.touches[0].clientX;
+      targetRateRef.current = 0;
+      setShowHint(false);
     };
-    requestAnimationFrame(slowDown);
-  };
 
-  // Mouse handlers for desktop
-  const handleMouseDown = (e) => {
-    lastXRef.current = e.clientX;
-    targetRateRef.current = 0;
-  };
+    const onTouchMove = (e) => {
+      e.preventDefault(); // needs passive:false
+      if (lastXRef.current === null) return;
+      const deltaX = e.touches[0].clientX - lastXRef.current;
+      lastXRef.current = e.touches[0].clientX;
+      // Left swipe = forward, right swipe = backward
+      targetRateRef.current = -(deltaX / 5);
+    };
 
+    const onTouchEnd = () => {
+      lastXRef.current = null;
+      // Decay to stop
+      const decay = () => {
+        targetRateRef.current *= 0.8;
+        if (Math.abs(targetRateRef.current) > 0.1) {
+          requestAnimationFrame(decay);
+        } else {
+          targetRateRef.current = 0;
+        }
+      };
+      requestAnimationFrame(decay);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, []);
+
+  // Mouse for desktop
+  const handleMouseDown = (e) => { lastXRef.current = e.clientX; };
   const handleMouseMove = (e) => {
-    if (lastXRef.current === null) return;
-    if (e.buttons !== 1) { lastXRef.current = null; return; }
+    if (e.buttons !== 1 || lastXRef.current === null) return;
     const deltaX = e.clientX - lastXRef.current;
     lastXRef.current = e.clientX;
-    targetRateRef.current = -(deltaX / 6);
+    targetRateRef.current = -(deltaX / 5);
   };
-
-  const handleMouseUp = () => {
-    lastXRef.current = null;
-    targetRateRef.current = 0;
-  };
+  const handleMouseUp = () => { lastXRef.current = null; targetRateRef.current = 0; };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -153,26 +160,25 @@ const PanoramaViewer = ({ tour, onClose, isLoading }) => {
         </button>
       </div>
 
-      {/* Video — full screen */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* Video container — touch events attached here via useEffect */}
+      <div
+        ref={containerRef}
+        className="flex-1 relative overflow-hidden"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{ cursor: 'grab' }}
+      >
         <video
           ref={videoRef}
           src={tour.panoramaUrl}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover pointer-events-none"
           playsInline
           muted
           preload="auto"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          style={{ touchAction: 'none', cursor: 'grab', userSelect: 'none' }}
         />
 
-        {/* Loading */}
         {!videoReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80">
             <div className="text-center">
@@ -182,7 +188,6 @@ const PanoramaViewer = ({ tour, onClose, isLoading }) => {
           </div>
         )}
 
-        {/* Hint */}
         {showHint && videoReady && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-black/60 backdrop-blur-sm rounded-2xl px-6 py-4 text-center">
@@ -196,15 +201,14 @@ const PanoramaViewer = ({ tour, onClose, isLoading }) => {
           </div>
         )}
 
-        {/* Simple time indicator — bottom left */}
         {videoReady && (
-          <div className="absolute bottom-4 left-4 bg-black/50 rounded-full px-3 py-1">
+          <div className="absolute bottom-4 left-4 bg-black/50 rounded-full px-3 py-1 pointer-events-none">
             <span className="text-white text-xs font-medium">{formatTime(currentTime)} / {formatTime(duration)}</span>
           </div>
         )}
       </div>
 
-      {/* Simple progress bar — thin line at very bottom */}
+      {/* Thin progress bar */}
       {videoReady && (
         <div className="h-1 bg-white/20 flex-shrink-0">
           <div className="h-full bg-blue-400 transition-none" style={{ width: `${progress}%` }} />
