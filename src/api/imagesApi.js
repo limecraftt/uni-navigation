@@ -14,8 +14,6 @@ export const uploadVideoToCloudinary = async (file, onProgress) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', uploadPreset);
-    formData.append('resource_type', 'video');
-    formData.append('folder', 'uni-navigation/panoramas');
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -46,7 +44,7 @@ export const uploadVideoToCloudinary = async (file, onProgress) => {
       });
 
       xhr.addEventListener('error', () => resolve({ data: null, error: 'Network error during upload' }));
-      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`);
       xhr.send(formData);
     });
   } catch (error) {
