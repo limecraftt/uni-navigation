@@ -6,7 +6,6 @@ import Home from './pages/Home';
 import CampusMap from './pages/CampusMap';
 import VirtualTour from './pages/VirtualTour';
 import Directions from './pages/Directions';
-import AdminVideos from './pages/AdminVideos';
 import AdminImages from './pages/AdminImages';
 import AdminLocations from "./pages/AdminLocations";
 import AdminPanoramas from './pages/AdminPanoramas';
@@ -23,7 +22,6 @@ function App() {
             <Route path="/campus-map" element={<CampusMap />} />
             <Route path="/virtual-tour" element={<VirtualTour />} />
             <Route path="/directions" element={<Directions />} />
-            <Route path="/admin/videos" element={<AdminVideos />} />
             <Route path="/admin/images" element={<AdminImages />} />
             <Route path="/admin/locations" element={<AdminLocations />} />
             <Route path="/admin/panoramas" element={<AdminPanoramas />} />
