@@ -8,6 +8,7 @@ import VirtualTour from './pages/VirtualTour';
 import Directions from './pages/Directions';
 import AdminVideos from './pages/AdminVideos';
 import AdminImages from './pages/AdminImages';
+import AdminLocations from "./pages/AdminLocations";
 import AdminPanoramas from './pages/AdminPanoramas';
 import './index.css';
 
@@ -24,6 +25,7 @@ function App() {
             <Route path="/directions" element={<Directions />} />
             <Route path="/admin/videos" element={<AdminVideos />} />
             <Route path="/admin/images" element={<AdminImages />} />
+            <Route path="/admin/locations" element={<AdminLocations />} />
             <Route path="/admin/panoramas" element={<AdminPanoramas />} />
           </Routes>
         </main>
