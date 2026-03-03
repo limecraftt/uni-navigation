@@ -1,117 +1,167 @@
 // src/components/tour/PanoramaViewer.jsx
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
-const PanoramaViewer = ({ tour, onClose }) => {
+const FRAME_COUNT = 12; // number of filmstrip frames to show
+
+const PanoramaViewer = ({ tour, onClose, isLoading }) => {
   const videoRef = useRef(null);
-  const sliderRef = useRef(null);
+  const filmstripRef = useRef(null);
+  const canvasRefs = useRef([]);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
-  const [lastTouchX, setLastTouchX] = useState(null);
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [frames, setFrames] = useState([]); // captured frame images
+  const [framesReady, setFramesReady] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+  const lastX = useRef(null);
+
+  // Hide hint after 3 seconds
+  useEffect(() => {
+    const t = setTimeout(() => setShowHint(false), 3000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    video.muted = true;
     video.pause();
+    video.currentTime = 0;
 
-    const handleLoaded = () => {
+    const onLoaded = async () => {
       setDuration(video.duration);
       setVideoReady(true);
-      video.currentTime = 0;
+      video.pause();
+      // Capture frames for filmstrip
+      await captureFrames(video, video.duration);
     };
 
-    video.addEventListener('loadedmetadata', handleLoaded);
-    return () => video.removeEventListener('loadedmetadata', handleLoaded);
+    video.addEventListener('loadeddata', onLoaded);
+    // Prevent autoplay
+    video.addEventListener('play', () => video.pause());
+    return () => {
+      video.removeEventListener('loadeddata', onLoaded);
+    };
   }, [tour.panoramaUrl]);
 
-  const seekTo = useCallback((time) => {
+  const captureFrames = async (video, dur) => {
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 120;
+    offscreen.height = 80;
+    const ctx = offscreen.getContext('2d');
+    const captured = [];
+
+    for (let i = 0; i < FRAME_COUNT; i++) {
+      const t = (i / (FRAME_COUNT - 1)) * dur;
+      await seekTo(video, t);
+      ctx.drawImage(video, 0, 0, 120, 80);
+      captured.push(offscreen.toDataURL('image/jpeg', 0.6));
+    }
+
+    setFrames(captured);
+    setFramesReady(true);
+    // Reset to start
+    video.currentTime = 0;
+    setCurrentTime(0);
+  };
+
+  const seekTo = (video, time) => new Promise((resolve) => {
+    video.currentTime = time;
+    const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+    video.addEventListener('seeked', onSeeked);
+  });
+
+  const scrubVideo = useCallback((time) => {
     const video = videoRef.current;
     if (!video || !duration) return;
     const clamped = Math.max(0, Math.min(duration, time));
     video.currentTime = clamped;
     setCurrentTime(clamped);
-    setHasInteracted(true);
   }, [duration]);
 
-  const positionToTime = useCallback((clientX) => {
-    const slider = sliderRef.current;
-    if (!slider || !duration) return 0;
-    const rect = slider.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    return ratio * duration;
-  }, [duration]);
-
-  // Mouse slider
-  const handleSliderMouseDown = (e) => {
-    setIsDragging(true);
-    seekTo(positionToTime(e.clientX));
-  };
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging) return;
-    seekTo(positionToTime(e.clientX));
-  }, [isDragging, seekTo, positionToTime]);
-
-  const handleMouseUp = useCallback(() => setIsDragging(false), []);
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  // Touch drag on video
+  // Touch scrubbing on video — swipe left/right
   const handleVideoTouchStart = (e) => {
-    setLastTouchX(e.touches[0].clientX);
+    lastX.current = e.touches[0].clientX;
+    setIsDragging(true);
+    setShowHint(false);
   };
 
   const handleVideoTouchMove = (e) => {
     e.preventDefault();
-    const x = e.touches[0].clientX;
-    const delta = lastTouchX - x; // positive = drag left = go forward
-    setLastTouchX(x);
-    seekTo(currentTime + delta * 0.05);
+    if (lastX.current === null) return;
+    const deltaX = e.touches[0].clientX - lastX.current;
+    lastX.current = e.touches[0].clientX;
+    // Sensitivity: full screen width = full video duration
+    const timeDelta = -(deltaX / window.innerWidth) * duration * 1.5;
+    scrubVideo(currentTime + timeDelta);
   };
 
-  const handleVideoTouchEnd = () => setLastTouchX(null);
+  const handleVideoTouchEnd = () => {
+    lastX.current = null;
+    setIsDragging(false);
+  };
 
-  // Touch on slider
-  const handleSliderTouchStart = (e) => {
+  // Filmstrip drag/touch
+  const scrubFromFilmstripX = useCallback((clientX) => {
+    const strip = filmstripRef.current;
+    if (!strip || !duration) return;
+    const rect = strip.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    scrubVideo(ratio * duration);
+  }, [duration, scrubVideo]);
+
+  const handleStripMouseDown = (e) => {
     setIsDragging(true);
-    seekTo(positionToTime(e.touches[0].clientX));
+    scrubFromFilmstripX(e.clientX);
   };
 
-  const handleSliderTouchMove = (e) => {
-    e.preventDefault();
+  const handleStripMouseMove = useCallback((e) => {
     if (!isDragging) return;
-    seekTo(positionToTime(e.touches[0].clientX));
+    scrubFromFilmstripX(e.clientX);
+  }, [isDragging, scrubFromFilmstripX]);
+
+  const handleStripMouseUp = useCallback(() => setIsDragging(false), []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleStripMouseMove);
+      window.addEventListener('mouseup', handleStripMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleStripMouseMove);
+      window.removeEventListener('mouseup', handleStripMouseUp);
+    };
+  }, [isDragging, handleStripMouseMove, handleStripMouseUp]);
+
+  const handleStripTouchStart = (e) => {
+    scrubFromFilmstripX(e.touches[0].clientX);
   };
 
-  const handleSliderTouchEnd = () => setIsDragging(false);
+  const handleStripTouchMove = (e) => {
+    e.preventDefault();
+    scrubFromFilmstripX(e.touches[0].clientX);
+  };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const formatTime = (t) => {
+    const s = Math.floor(t);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/80">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-white font-bold text-base md:text-xl truncate">{tour.title}</h2>
+      <div className="flex items-center justify-between px-4 py-3 bg-black/70 z-10 flex-shrink-0">
+        <div className="min-w-0">
+          <h2 className="text-white font-bold text-base md:text-lg truncate">{tour.title}</h2>
           {tour.description && (
-            <p className="text-white/50 text-xs truncate">{tour.description}</p>
+            <p className="text-gray-400 text-xs truncate">{tour.description}</p>
           )}
         </div>
         <button
           onClick={onClose}
-          className="ml-3 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors flex-shrink-0"
+          className="ml-3 flex-shrink-0 p-2 bg-white/10 hover:bg-white/20 rounded-full"
         >
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -120,84 +170,133 @@ const PanoramaViewer = ({ tour, onClose }) => {
       </div>
 
       {/* Video */}
-      <div className="flex-1 relative overflow-hidden bg-black">
-        <video
-          ref={videoRef}
-          src={tour.panoramaUrl}
-          className="w-full h-full object-cover select-none"
-          muted
-          playsInline
-          preload="auto"
-          onTouchStart={handleVideoTouchStart}
-          onTouchMove={handleVideoTouchMove}
-          onTouchEnd={handleVideoTouchEnd}
-          style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
-        />
-
-        {/* Loading */}
-        {!videoReady && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent mb-4"></div>
-            <p className="text-white/60 text-sm">Loading 360° tour...</p>
+      <div className="flex-1 relative overflow-hidden">
+        {isLoading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
           </div>
-        )}
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              src={tour.panoramaUrl}
+              className="w-full h-full object-cover"
+              playsInline
+              muted
+              preload="auto"
+              onTouchStart={handleVideoTouchStart}
+              onTouchMove={handleVideoTouchMove}
+              onTouchEnd={handleVideoTouchEnd}
+              style={{ touchAction: 'none', cursor: isDragging ? 'grabbing' : 'grab' }}
+            />
 
-        {/* First-time hint */}
-        {videoReady && !hasInteracted && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-5 text-center mx-6">
-              <div className="flex items-center justify-center gap-3 text-white mb-2">
-                <span className="text-3xl">👈</span>
-                <span className="text-xl font-bold">Drag to Explore</span>
-                <span className="text-3xl">👉</span>
+            {/* Loading overlay */}
+            {!videoReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-3"></div>
+                  <p className="text-white text-sm">Loading video...</p>
+                </div>
               </div>
-              <p className="text-white/50 text-sm">Swipe on video or drag the bar below</p>
-            </div>
-          </div>
+            )}
+
+            {/* Frames loading overlay */}
+            {videoReady && !framesReady && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                <div className="bg-black/60 rounded-full px-4 py-2 flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <span className="text-white text-xs">Preparing filmstrip...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Drag hint */}
+            {showHint && videoReady && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-black/60 backdrop-blur-sm rounded-2xl px-6 py-4 text-center">
+                  <div className="flex items-center justify-center space-x-3 mb-1">
+                    <span className="text-2xl">👈</span>
+                    <span className="text-white font-bold text-base">Drag to Explore</span>
+                    <span className="text-2xl">👉</span>
+                  </div>
+                  <p className="text-gray-300 text-xs">Swipe on video or drag the bar below</p>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Scrubber */}
-      <div className="bg-black px-4 pt-4 pb-8 md:pb-5">
-        {/* Slider */}
+      {/* Filmstrip Scrubber */}
+      <div className="bg-black flex-shrink-0 pt-2 pb-4 px-0">
+        {/* Time */}
+        <div className="flex justify-between text-xs text-gray-500 px-4 mb-2">
+          <span className="text-white">{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+
+        {/* Filmstrip */}
         <div
-          ref={sliderRef}
-          className="relative w-full h-10 flex items-center cursor-pointer"
-          onMouseDown={handleSliderMouseDown}
-          onTouchStart={handleSliderTouchStart}
-          onTouchMove={handleSliderTouchMove}
-          onTouchEnd={handleSliderTouchEnd}
-          style={{ touchAction: 'none' }}
+          ref={filmstripRef}
+          className="relative overflow-hidden cursor-pointer"
+          onMouseDown={handleStripMouseDown}
+          onTouchStart={handleStripTouchStart}
+          onTouchMove={handleStripTouchMove}
+          style={{ touchAction: 'none', height: '72px', cursor: 'col-resize' }}
         >
-          {/* Track */}
-          <div className="w-full h-1.5 bg-white/20 rounded-full overflow-visible relative">
-            {/* Fill */}
-            <div
-              className="h-full bg-white rounded-full"
-              style={{ width: `${progress}%` }}
-            />
-            {/* Thumb */}
-            <div
-              className="absolute top-1/2 w-5 h-5 bg-white rounded-full shadow-lg -translate-y-1/2 -translate-x-1/2"
-              style={{ left: `${progress}%` }}
-            />
+          {/* Frame images */}
+          <div className="flex w-full h-full">
+            {framesReady ? (
+              frames.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  className="flex-1 h-full object-cover"
+                  style={{ minWidth: 0 }}
+                  draggable={false}
+                />
+              ))
+            ) : (
+              // Placeholder skeleton while frames load
+              Array.from({ length: FRAME_COUNT }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-full bg-gray-800 border-r border-gray-900 animate-pulse"
+                />
+              ))
+            )}
+          </div>
+
+          {/* Vertical position indicator */}
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none"
+            style={{
+              left: `${progress}%`,
+              boxShadow: '0 0 6px rgba(255,255,255,0.8)',
+            }}
+          >
+            {/* Top triangle */}
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0"
+              style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '8px solid white' }} />
+            {/* Bottom triangle */}
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0"
+              style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '8px solid white' }} />
           </div>
         </div>
 
-        {/* Time labels */}
-        <div className="flex justify-between mt-2">
-          <span className="text-white/40 text-xs">{formatTime(currentTime)}</span>
-          <span className="text-white/25 text-xs hidden md:block">← drag to look around →</span>
-          <span className="text-white/40 text-xs">{formatTime(duration)}</span>
-        </div>
+        {/* Highlights */}
+        {tour.highlights && tour.highlights.length > 0 && (
+          <div className="flex gap-2 mt-3 px-4 overflow-x-auto scrollbar-hide">
+            {tour.highlights.map((h, i) => (
+              <span key={i} className="flex-shrink-0 px-3 py-1 bg-white/10 text-gray-300 rounded-full text-xs border border-white/20">
+                {h}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-const formatTime = (s) => {
-  if (!s || isNaN(s)) return '0:00';
-  return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 };
 
 export default PanoramaViewer;
