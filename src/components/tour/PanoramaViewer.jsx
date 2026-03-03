@@ -137,13 +137,7 @@ const PanoramaViewer = ({ tour, onClose }) => {
             </div>
           </div>
         )}
-        {videoReady && !isPlaying && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/50 rounded-full p-5">
-              <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            </div>
-          </div>
-        )}
+
         {videoReady && (
           <div className="absolute top-3 left-3 bg-purple-600/80 text-white px-2 py-1 rounded-full text-xs font-bold pointer-events-none">360° Tour</div>
         )}
