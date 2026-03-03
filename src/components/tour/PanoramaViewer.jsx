@@ -25,6 +25,7 @@ const PanoramaViewer = ({ tour, onClose, isLoading }) => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    video.crossOrigin = 'anonymous';
     video.pause();
     video.currentTime = 0;
 
@@ -180,6 +181,7 @@ const PanoramaViewer = ({ tour, onClose, isLoading }) => {
             <video
               ref={videoRef}
               src={tour.panoramaUrl}
+              crossOrigin="anonymous"
               className="w-full h-full object-cover"
               playsInline
               muted
