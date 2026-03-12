@@ -9,6 +9,7 @@ import Directions from './pages/Directions';
 import AdminImages from './pages/AdminImages';
 import AdminLocations from "./pages/AdminLocations";
 import AdminPanoramas from './pages/AdminPanoramas';
+import AdminVideos from './pages/AdminVideos';
 import './index.css';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
             <Route path="/admin/images" element={<AdminImages />} />
             <Route path="/admin/locations" element={<AdminLocations />} />
             <Route path="/admin/panoramas" element={<AdminPanoramas />} />
+            <Route path="/admin/videos" element={<AdminVideos />} />
           </Routes>
         </main>
         <Footer />
