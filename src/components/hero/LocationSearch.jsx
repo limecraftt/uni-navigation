@@ -9,45 +9,41 @@ const LocationSearch = ({
   onDropdownToggle,
   activeCategory,
   locations,
+  categories,
   onCategorySelect,
   onLocationSelect,
   currentLocation
 }) => {
   const dropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         onDropdownToggle(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onDropdownToggle]);
 
-  const handleInputFocus = () => {
-    onDropdownToggle(true);
-  };
-
   return (
     <div className="relative" ref={dropdownRef}>
       <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-3 hover:bg-white/15 transition-colors">
-        <input 
-          type="text" 
-          placeholder="Where do you want to go?" 
+        <input
+          type="text"
+          placeholder="Where do you want to go?"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          onFocus={handleInputFocus}
+          onFocus={() => onDropdownToggle(true)}
           className="bg-transparent text-white placeholder-white/70 outline-none text-lg w-64"
         />
       </div>
 
-      <LocationDropdown 
+      <LocationDropdown
         isOpen={isDropdownOpen}
         activeCategory={activeCategory}
         locations={locations}
+        categories={categories}
         onCategorySelect={onCategorySelect}
         onLocationSelect={onLocationSelect}
         currentLocation={currentLocation}

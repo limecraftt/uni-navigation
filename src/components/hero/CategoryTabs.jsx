@@ -1,8 +1,23 @@
 // src/components/hero/CategoryTabs.jsx
 import React from 'react';
-import { LOCATION_CATEGORIES } from '../../utils/constants';
 
-const CategoryTabs = ({ activeCategory, onCategorySelect }) => {
+const CATEGORY_ICONS = {
+  Academic: '🎓',
+  Administrative: '🏢',
+  Accommodation: '🏠',
+  Dining: '🍽️',
+  Entrance: '🚪',
+  Events: '🎭',
+  'Health Services': '🏥',
+  Parking: '🅿️',
+  Recreation: '⚽',
+  Religious: '⛪',
+  Research: '🔬',
+  'Student Services': '👥',
+  Other: '📍',
+};
+
+const CategoryTabs = ({ activeCategory, onCategorySelect, categories = [] }) => {
   return (
     <div className="border-b border-gray-200 p-4">
       <div className="flex flex-wrap gap-2">
@@ -16,17 +31,17 @@ const CategoryTabs = ({ activeCategory, onCategorySelect }) => {
         >
           ⭐ Popular
         </button>
-        {LOCATION_CATEGORIES.map(category => (
+        {categories.map(cat => (
           <button
-            key={category.key}
-            onClick={() => onCategorySelect(category.key)}
+            key={cat.key}
+            onClick={() => onCategorySelect(cat.key)}
             className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-              activeCategory === category.key
+              activeCategory === cat.key
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {category.icon} {category.label}
+            {CATEGORY_ICONS[cat.label] || '📍'} {cat.label}
           </button>
         ))}
       </div>

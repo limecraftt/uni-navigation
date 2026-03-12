@@ -1,40 +1,48 @@
 // src/hooks/useLocationSearch.jsx
 import { useState, useEffect } from 'react';
-import { 
-  ALL_LOCATIONS, 
-  POPULAR_LOCATIONS, 
-  CAMPUS_LOCATIONS 
-} from '../utils/constants';
+import { getAllLocations } from '../api/locationsApi';
 
 export const useLocationSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredLocations, setFilteredLocations] = useState([]);
   const [activeCategory, setActiveCategory] = useState('POPULAR');
+  const [allLocations, setAllLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Handle search input changes
+  useEffect(() => {
+    getAllLocations().then(({ data }) => {
+      setAllLocations(data || []);
+      setLoading(false);
+    });
+  }, []);
+
   useEffect(() => {
     if (searchQuery.trim()) {
-      const filtered = ALL_LOCATIONS.filter(location =>
-        location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        location.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        location.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredLocations(filtered);
       setActiveCategory('SEARCH');
-    } else {
-      setFilteredLocations([]);
+    } else if (activeCategory === 'SEARCH') {
       setActiveCategory('POPULAR');
     }
   }, [searchQuery]);
 
   const getLocationsToShow = () => {
-    if (activeCategory === 'SEARCH' && searchQuery) {
-      return filteredLocations;
-    } else if (activeCategory === 'POPULAR') {
-      return POPULAR_LOCATIONS;
-    } else {
-      return CAMPUS_LOCATIONS[activeCategory] || [];
+    if (activeCategory === 'SEARCH' && searchQuery.trim()) {
+      return allLocations.filter(loc =>
+        loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (loc.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        loc.category.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
+    if (activeCategory === 'POPULAR') {
+      return allLocations.slice(0, 6);
+    }
+    return allLocations.filter(
+      loc => loc.category.toLowerCase() === activeCategory.toLowerCase()
+    );
+  };
+
+  // Build unique categories dynamically from real data
+  const getCategories = () => {
+    const unique = [...new Set(allLocations.map(loc => loc.category))];
+    return unique.map(cat => ({ key: cat, label: cat }));
   };
 
   const handleCategorySelect = (categoryKey) => {
@@ -47,6 +55,9 @@ export const useLocationSearch = () => {
     setSearchQuery,
     activeCategory,
     handleCategorySelect,
-    getLocationsToShow
+    getLocationsToShow,
+    getCategories,
+    allLocations,
+    loading
   };
 };

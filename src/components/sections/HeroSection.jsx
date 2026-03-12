@@ -25,7 +25,8 @@ const HeroSection = () => {
     setSearchQuery,
     activeCategory,
     handleCategorySelect,
-    getLocationsToShow
+    getLocationsToShow,
+    getCategories
   } = useLocationSearch();
 
   const handleLocationSelect = (location) => {
@@ -48,7 +49,6 @@ const HeroSection = () => {
 
   return (
     <div className="min-h-screen md:min-h-0 md:py-20 flex flex-col justify-between md:block pt-16 pb-8 md:pt-0 md:pb-0">
-      {/* Main content — pushed toward upper third on mobile */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center text-white max-w-4xl mx-auto">
           <h1 className="text-3xl md:text-5xl font-bold mb-2">
@@ -62,7 +62,6 @@ const HeroSection = () => {
             Discover every corner of your academic home.
           </p>
           
-          {/* Location Status */}
           {currentLocation && (
             <div className="flex items-center justify-center space-x-2 text-sm text-white/80 mb-4 md:mb-6">
               <CurrentLocationIcon className="w-4 h-4" />
@@ -74,7 +73,6 @@ const HeroSection = () => {
             </div>
           )}
           
-          {/* Action Buttons */}
           <div className="flex flex-col gap-3 justify-center items-center w-full max-w-sm mx-auto md:max-w-none md:flex-row md:gap-4">
             <Link to="/directions" className="w-full md:w-auto">
               <Button 
@@ -96,6 +94,7 @@ const HeroSection = () => {
                 onDropdownToggle={setIsDropdownOpen}
                 activeCategory={activeCategory}
                 locations={getLocationsToShow()}
+                categories={getCategories()}
                 onCategorySelect={handleCategorySelect}
                 onLocationSelect={handleLocationSelect}
                 currentLocation={currentLocation}
@@ -109,7 +108,6 @@ const HeroSection = () => {
             </Link>
           </div>
 
-          {/* Selected Location Card */}
           {selectedLocation && showDirections && (
             <div className="mt-6">
               <LocationCard
@@ -123,7 +121,6 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* Scroll hint pinned to bottom on mobile */}
       <div className="md:hidden flex flex-col items-center text-white/50 animate-bounce pb-4">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -131,7 +128,6 @@ const HeroSection = () => {
         <span className="text-xs mt-1">Scroll to explore</span>
       </div>
 
-      {/* QR Code Modal */}
       <QRModal
         isOpen={showQRModal}
         onClose={() => setShowQRModal(false)}
