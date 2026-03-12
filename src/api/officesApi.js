@@ -41,7 +41,7 @@ export const getOfficesByCategory = async (category) => {
 };
 
 /**
- * Fetch single office by office_id (custom ID like 'education-dean')
+ * Fetch single office by office_id
  */
 export const getOfficeByOfficeId = async (officeId) => {
   try {
@@ -125,7 +125,7 @@ export const uploadNavigationVideo = async (file, officeId, stepNumber) => {
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${officeId}/step-${stepNumber}-${Date.now()}.${fileExt}`;
-    
+
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('navigation-videos')
       .upload(fileName, file, {
@@ -135,7 +135,6 @@ export const uploadNavigationVideo = async (file, officeId, stepNumber) => {
 
     if (uploadError) throw uploadError;
 
-    // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('navigation-videos')
       .getPublicUrl(fileName);
@@ -217,7 +216,7 @@ export const getQRCode = async (officeId) => {
       .from('qr_codes')
       .select('*')
       .eq('office_id', officeId)
-      .single();
+      .maybeSingle(); // ← fixed: was .single()
 
     if (error) throw error;
     return { data, error: null };
@@ -232,12 +231,11 @@ export const getQRCode = async (officeId) => {
  */
 export const uploadQRCode = async (qrDataUrl, officeId) => {
   try {
-    // Convert data URL to blob
     const response = await fetch(qrDataUrl);
     const blob = await response.blob();
-    
+
     const fileName = `${officeId}-qr-${Date.now()}.png`;
-    
+
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('qr-codes')
       .upload(fileName, blob, {
@@ -248,7 +246,6 @@ export const uploadQRCode = async (qrDataUrl, officeId) => {
 
     if (uploadError) throw uploadError;
 
-    // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('qr-codes')
       .getPublicUrl(fileName);
@@ -286,7 +283,6 @@ export const saveQRCode = async (qrCodeData) => {
  */
 export const getCompleteOfficeData = async (officeId) => {
   try {
-    // Fetch office
     const { data: office, error: officeError } = await supabase
       .from('offices')
       .select('*')
@@ -295,7 +291,6 @@ export const getCompleteOfficeData = async (officeId) => {
 
     if (officeError) throw officeError;
 
-    // Fetch videos with instructions
     const { data: videos, error: videosError } = await supabase
       .from('navigation_videos')
       .select(`
@@ -307,15 +302,13 @@ export const getCompleteOfficeData = async (officeId) => {
 
     if (videosError) throw videosError;
 
-    // Fetch QR code
     const { data: qrCode } = await supabase
       .from('qr_codes')
       .select('*')
       .eq('office_id', office.id)
-      .single();
+      .maybeSingle(); // ← fixed here too
 
-    // Format the data to match your current structure
-    const indoorRoute = videos.map((video, index) => ({
+    const indoorRoute = videos.map((video) => ({
       step: video.step_number,
       instruction: video.navigation_instructions[0]?.instruction_text || 'Continue forward',
       landmark: video.navigation_instructions[0]?.landmark || '',
